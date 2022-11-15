@@ -5,6 +5,11 @@ pub use winit::event_loop::ControlFlow;
 
 mod close_handler;
 pub use close_handler::CloseHandler;
+
+mod draw_handler;
+pub use draw_handler::DrawHandler;
+pub use draw_handler::DrawHandlerSubscriber;
+
 use winit::window::Window;
 
 pub trait EventChainElement {
