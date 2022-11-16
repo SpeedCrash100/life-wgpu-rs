@@ -1,8 +1,4 @@
-use winit::{
-    event_loop::{self, EventLoop},
-    monitor::{MonitorHandle, VideoMode},
-    window::WindowBuilder,
-};
+use winit::{event_loop::EventLoop, window::WindowBuilder};
 
 mod event_chain;
 use event_chain::*;
@@ -13,6 +9,8 @@ use app::App;
 mod camera;
 
 mod shader;
+
+mod life;
 
 pub async fn run() {
     env_logger::init();

@@ -2,15 +2,15 @@ use std::sync::{Arc, Mutex};
 
 use log::info;
 use wgpu::{
-    util::{DeviceExt, RenderEncoder},
-    BindGroup, Buffer, Device, Instance, PrimitiveState, Queue, RenderPipeline, Surface,
-    SurfaceConfiguration,
+    util::DeviceExt, BindGroup, Buffer, Device, Instance, PrimitiveState, Queue, RenderPipeline,
+    Surface, SurfaceConfiguration,
 };
 use winit::{event::VirtualKeyCode, window::Window};
 
 use crate::{
     camera::Camera,
     event_chain::{DrawHandlerSubscriber, KeyboardHandlerSubscriber},
+    life::Life,
     shader::{CellInfo, Shader, Vertex},
 };
 
@@ -49,6 +49,8 @@ pub struct App {
 
     instance_buffer: Buffer,
     cells: Vec<CellInfo>,
+
+    life: Life,
 }
 
 impl App {
@@ -91,19 +93,14 @@ impl App {
 
         // Init instances
 
-        let cells = (0..256)
-            .flat_map(|x| {
-                (0..256).map(move |y| CellInfo {
-                    pos: [x as f32, y as f32],
-                    living: rand::random::<u32>() % 2,
-                })
-            })
-            .collect::<Vec<_>>();
+        let life = Life::new(256, 256);
+
+        let cells = life.generate_cell_info();
 
         let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Instance Buffer"),
             contents: bytemuck::cast_slice(&cells),
-            usage: wgpu::BufferUsages::VERTEX,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
         });
 
         // Shader init
@@ -179,10 +176,17 @@ impl App {
 
             instance_buffer,
             cells,
+
+            life,
         }))
     }
 
     pub fn update(&mut self) {
+        self.life.step();
+        self.cells = self.life.generate_cell_info();
+        self.queue
+            .write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(&self.cells));
+
         let camera_raw = self.camera.build_raw();
         self.queue
             .write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[camera_raw]));

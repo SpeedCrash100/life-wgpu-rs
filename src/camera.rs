@@ -23,13 +23,14 @@ impl Camera {
         let center: Point3<f32> = (0.0, 0.0, 0.0).into();
         let up: Vector3<f32> = cgmath::Vector3::unit_y();
 
-        let view = cgmath::Matrix4::look_at_rh(eye, center, up);
+        let mut view = cgmath::Matrix4::look_at_rh(eye, center, up);
+        view = view * cgmath::Matrix4::from_scale(5.0);
         let ortho = ortho(0.0, width as f32, 0.0, height as f32, 0.1, 100.0);
 
         Self {
             view,
             ortho,
-            speed: 0.1,
+            speed: 5.0,
         }
     }
 

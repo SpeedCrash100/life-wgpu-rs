@@ -35,7 +35,7 @@ fn vs_main(
     if instance.living > u32(0) {
         out.color = vec4<f32>(1.0, 0.0, 0.0, 1.0);
     } else {
-        out.color = vec4<f32>(0.3, 0.3, 0.3, 1.0);
+        out.color = vec4<f32>(0.5, 0.5, 0.5, 1.0);
     }
     return out;
 }
