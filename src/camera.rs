@@ -24,7 +24,7 @@ impl Camera {
         let up: Vector3<f32> = cgmath::Vector3::unit_y();
 
         let mut view = cgmath::Matrix4::look_at_rh(eye, center, up);
-        view = view * cgmath::Matrix4::from_scale(5.0);
+        view = view * cgmath::Matrix4::from_scale(1.0);
         let ortho = ortho(0.0, width as f32, 0.0, height as f32, 0.1, 100.0);
 
         Self {

@@ -86,14 +86,14 @@ impl App {
             format: surface.get_supported_formats(&adapter)[0],
             width: size.width,
             height: size.height,
-            present_mode: wgpu::PresentMode::AutoVsync,
+            present_mode: wgpu::PresentMode::AutoNoVsync,
             alpha_mode: wgpu::CompositeAlphaMode::Auto,
         };
         surface.configure(&device, &config);
 
         // Init instances
 
-        let life = Life::new(256, 256, &device);
+        let life = Life::new(1024, 1024, &device);
 
         let cells = life.generate_cell_info();
 
@@ -185,7 +185,7 @@ impl App {
     }
 
     pub fn update(&mut self) {
-        self.life.step(&self.queue);
+        self.life.step(&self.queue, &self.device);
 
         let camera_raw = self.camera.build_raw();
         self.queue
