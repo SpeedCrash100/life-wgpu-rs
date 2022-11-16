@@ -55,7 +55,24 @@ pub struct App {
 
 impl App {
     pub async fn new(window: &Window) -> Arc<Mutex<Self>> {
-        let instance = Instance::new(wgpu::Backends::all());
+        let backends = match std::env::var("WGPU_DRIVER") {
+            Ok(s) => {
+                if s == "vulkan" {
+                    wgpu::Backends::VULKAN
+                } else if s == "dx12" {
+                    wgpu::Backends::DX12
+                } else if s == "dx11" {
+                    wgpu::Backends::DX11
+                } else if s == "gl" {
+                    wgpu::Backends::GL
+                } else {
+                    wgpu::Backends::all()
+                }
+            }
+            Err(_) => wgpu::Backends::all(),
+        };
+
+        let instance = Instance::new(backends);
         let surface = unsafe { instance.create_surface(window) };
 
         let adapter = instance
