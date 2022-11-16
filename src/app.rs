@@ -11,7 +11,7 @@ use crate::{
     camera::Camera,
     event_chain::{DrawHandlerSubscriber, KeyboardHandlerSubscriber},
     life::Life,
-    shader::{CellInfo, Shader, Vertex},
+    shader::{Shader, Vertex},
 };
 
 const VERTICES: &[Vertex] = &[
@@ -48,9 +48,9 @@ pub struct App {
     num_indices: u32,
 
     instance_buffer: Buffer,
-    cells: Vec<CellInfo>,
 
     life: Life,
+    life_bind_group: BindGroup,
 }
 
 impl App {
@@ -93,7 +93,7 @@ impl App {
 
         // Init instances
 
-        let life = Life::new(256, 256);
+        let life = Life::new(256, 256, &device);
 
         let cells = life.generate_cell_info();
 
@@ -118,10 +118,13 @@ impl App {
         let (camera_bind_group_layout, camera_bind_group) =
             shader.create_camera_bind_group(&device, &camera_buffer);
 
+        let (life_bind_group_layout, life_bind_group) =
+            shader.create_life_field_bind(&device, life.life_buffer());
+
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&camera_bind_group_layout],
+                bind_group_layouts: &[&camera_bind_group_layout, &life_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -175,17 +178,14 @@ impl App {
             num_indices,
 
             instance_buffer,
-            cells,
 
             life,
+            life_bind_group,
         }))
     }
 
     pub fn update(&mut self) {
-        self.life.step();
-        self.cells = self.life.generate_cell_info();
-        self.queue
-            .write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(&self.cells));
+        self.life.step(&self.queue);
 
         let camera_raw = self.camera.build_raw();
         self.queue
@@ -237,10 +237,11 @@ impl DrawHandlerSubscriber for App {
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
+            render_pass.set_bind_group(1, &self.life_bind_group, &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
             render_pass.set_index_buffer(self.indices_buffer.slice(..), wgpu::IndexFormat::Uint16);
-            render_pass.draw_indexed(0..self.num_indices, 0, 0..self.cells.len() as _);
+            render_pass.draw_indexed(0..self.num_indices, 0, 0..self.life.cell_count() as _);
         }
 
         // submit will accept anything that implements IntoIter

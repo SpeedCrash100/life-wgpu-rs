@@ -29,12 +29,10 @@ impl Vertex {
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 pub struct CellInfo {
     pub pos: [f32; 2],
-    pub living: u32,
 }
 
 impl CellInfo {
-    const ATTRIBS: [wgpu::VertexAttribute; 2] =
-        wgpu::vertex_attr_array![1 => Float32x2, 2 => Uint32];
+    const ATTRIBS: [wgpu::VertexAttribute; 1] = wgpu::vertex_attr_array![1 => Float32x2];
 
     fn desc() -> wgpu::VertexBufferLayout<'static> {
         use std::mem;
@@ -112,6 +110,37 @@ impl Shader {
             entries: &[BindGroupEntry {
                 binding: 0,
                 resource: camera_buffer.as_entire_binding(),
+            }],
+        });
+
+        (bind_group_layout, bind_group)
+    }
+
+    pub fn create_life_field_bind(
+        &self,
+        device: &Device,
+        life_buffer: &Buffer,
+    ) -> (BindGroupLayout, BindGroup) {
+        let bind_group_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            label: Some("Life field bind group layout"),
+            entries: &[BindGroupLayoutEntry {
+                binding: 0,
+                visibility: ShaderStages::VERTEX,
+                ty: BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        });
+
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Life field  bind group"),
+            layout: &bind_group_layout,
+            entries: &[BindGroupEntry {
+                binding: 0,
+                resource: life_buffer.as_entire_binding(),
             }],
         });
 

@@ -6,6 +6,9 @@ struct CameraUniform {
 @group(0) @binding(0) 
 var<uniform> camera: CameraUniform;
 
+@group(1) @binding(0)
+var<storage, read> life_field: array<u32>;
+
 
 struct VertexInput {
     @location(0) position: vec3<f32>,
@@ -17,8 +20,7 @@ struct VertexOutput {
 }
 
 struct CellInfo {
-    @location(1) pos: vec2<f32>,
-    @location(2) living: u32,
+    @location(1) pos: vec2<f32>
 }
 
 @vertex
@@ -29,14 +31,18 @@ fn vs_main(
 
     var shift = vec4<f32>(instance.pos, 0.0, 0.0);
     var position = vec4<f32>(model.position, 1.0) + shift;
+    var col = u32(instance.pos.x) % 256u;
+    var line_: u32 = u32(instance.pos.y) % 256u;
+    var idx = col + 256u * line_;
 
     var out: VertexOutput;
     out.clip_position = camera.view_proj * position;
-    if instance.living > u32(0) {
+    if life_field[idx] > 0u {
         out.color = vec4<f32>(1.0, 0.0, 0.0, 1.0);
     } else {
         out.color = vec4<f32>(0.5, 0.5, 0.5, 1.0);
     }
+    
     return out;
 }
 
