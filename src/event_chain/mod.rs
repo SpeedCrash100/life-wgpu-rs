@@ -10,6 +10,10 @@ mod draw_handler;
 pub use draw_handler::DrawHandler;
 pub use draw_handler::DrawHandlerSubscriber;
 
+mod keyboard_handler;
+pub use keyboard_handler::KeyboardHandler;
+pub use keyboard_handler::KeyboardHandlerSubscriber;
+
 use winit::window::Window;
 
 pub trait EventChainElement {
