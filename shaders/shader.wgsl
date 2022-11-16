@@ -20,7 +20,8 @@ struct VertexOutput {
 }
 
 struct CellInfo {
-    @location(1) pos: vec2<f32>
+    @location(1) pos: vec2<f32>,
+    @location(2) idx: u32,
 }
 
 @vertex
@@ -31,13 +32,10 @@ fn vs_main(
 
     var shift = vec4<f32>(instance.pos, 0.0, 0.0);
     var position = vec4<f32>(model.position, 1.0) + shift;
-    var col = u32(instance.pos.x) % 256u;
-    var line_: u32 = u32(instance.pos.y) % 256u;
-    var idx = col + 256u * line_;
 
     var out: VertexOutput;
     out.clip_position = camera.view_proj * position;
-    if life_field[idx] > 0u {
+    if life_field[instance.idx] > 0u {
         out.color = vec4<f32>(1.0, 0.0, 0.0, 1.0);
     } else {
         out.color = vec4<f32>(0.5, 0.5, 0.5, 1.0);

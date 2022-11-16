@@ -29,10 +29,12 @@ impl Vertex {
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 pub struct CellInfo {
     pub pos: [f32; 2],
+    pub idx: u32,
 }
 
 impl CellInfo {
-    const ATTRIBS: [wgpu::VertexAttribute; 1] = wgpu::vertex_attr_array![1 => Float32x2];
+    const ATTRIBS: [wgpu::VertexAttribute; 2] =
+        wgpu::vertex_attr_array![1 => Float32x2, 2 => Uint32];
 
     fn desc() -> wgpu::VertexBufferLayout<'static> {
         use std::mem;

@@ -102,6 +102,7 @@ impl Life {
             for j in 0..self.height {
                 out.push(CellInfo {
                     pos: [i as f32, j as f32],
+                    idx: self.index(i, j) as u32,
                 })
             }
         }
