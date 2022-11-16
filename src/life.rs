@@ -82,7 +82,7 @@ impl Life {
                     continue;
                 }
 
-                if x == 0 || y == 0 {
+                if (x == 0 && i == 0) || (y == 0 && j == 0) {
                     continue;
                 }
 
