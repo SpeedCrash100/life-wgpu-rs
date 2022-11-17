@@ -1,33 +1,10 @@
-use bytemuck::{Pod, Zeroable};
 use wgpu::{
     include_wgsl, BindGroup, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor,
     BindGroupLayoutEntry, BindingType, Buffer, ColorTargetState, Device, FragmentState,
     ShaderModule, ShaderStages, TextureFormat, VertexBufferLayout, VertexState,
 };
 
-use crate::model::Vertex;
-
-#[repr(C)]
-#[derive(Debug, Clone, Copy, Pod, Zeroable)]
-pub struct CellInfo {
-    pub pos: [f32; 2],
-    pub idx: u32,
-}
-
-impl CellInfo {
-    const ATTRIBS: [wgpu::VertexAttribute; 2] =
-        wgpu::vertex_attr_array![1 => Float32x2, 2 => Uint32];
-
-    fn desc() -> wgpu::VertexBufferLayout<'static> {
-        use std::mem;
-
-        wgpu::VertexBufferLayout {
-            array_stride: mem::size_of::<Self>() as wgpu::BufferAddress,
-            step_mode: wgpu::VertexStepMode::Instance,
-            attributes: &Self::ATTRIBS,
-        }
-    }
-}
+use crate::{bindable::CellPos, model::Vertex};
 
 pub struct Shader {
     module: ShaderModule,
@@ -39,7 +16,7 @@ impl Shader {
     pub fn new(device: &Device, texture_format: TextureFormat) -> Self {
         let module = device.create_shader_module(include_wgsl!("../shaders/shader.wgsl"));
 
-        let vertex_buffer_layout = vec![Vertex::desc(), CellInfo::desc()];
+        let vertex_buffer_layout = vec![Vertex::desc(), CellPos::desc()];
         let color_target_states = vec![Some(ColorTargetState {
             format: texture_format,
             blend: Some(wgpu::BlendState::ALPHA_BLENDING),
@@ -94,37 +71,6 @@ impl Shader {
             entries: &[BindGroupEntry {
                 binding: 0,
                 resource: camera_buffer.as_entire_binding(),
-            }],
-        });
-
-        (bind_group_layout, bind_group)
-    }
-
-    pub fn create_life_field_bind(
-        &self,
-        device: &Device,
-        life_buffer: &Buffer,
-    ) -> (BindGroupLayout, BindGroup) {
-        let bind_group_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            label: Some("Life field bind group layout"),
-            entries: &[BindGroupLayoutEntry {
-                binding: 0,
-                visibility: ShaderStages::VERTEX,
-                ty: BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            }],
-        });
-
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Life field  bind group"),
-            layout: &bind_group_layout,
-            entries: &[BindGroupEntry {
-                binding: 0,
-                resource: life_buffer.as_entire_binding(),
             }],
         });
 

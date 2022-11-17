@@ -8,6 +8,9 @@ use wgpu::{
 use winit::{event::VirtualKeyCode, window::Window};
 
 use crate::{
+    bindable::{
+        BinableToRenderPass, BindableToVertexBuffers, CellPosInstances, FieldState, HaveBindGroup,
+    },
     camera::Camera,
     event_chain::{DrawHandlerSubscriber, KeyboardHandlerSubscriber},
     life::Life,
@@ -29,10 +32,10 @@ pub struct App {
 
     quad: Quad,
 
-    instance_buffer: Buffer,
+    instance_buffer: CellPosInstances,
 
     life: Life,
-    life_bind_group: BindGroup,
+    life_buffer: Arc<FieldState>,
 }
 
 impl App {
@@ -93,14 +96,9 @@ impl App {
         // Init instances
 
         let life = Life::new(1024, 1024, &device);
+        let life_buffer = life.life_buffer();
 
-        let cells = life.generate_cell_info();
-
-        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Instance Buffer"),
-            contents: bytemuck::cast_slice(&cells),
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-        });
+        let instance_buffer = life.generate_cell_info(&device);
 
         // Shader init
         let shader = Shader::new(&device, config.format);
@@ -117,13 +115,13 @@ impl App {
         let (camera_bind_group_layout, camera_bind_group) =
             shader.create_camera_bind_group(&device, &camera_buffer);
 
-        let (life_bind_group_layout, life_bind_group) =
-            shader.create_life_field_bind(&device, life.life_buffer());
-
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&camera_bind_group_layout, &life_bind_group_layout],
+                bind_group_layouts: &[
+                    &camera_bind_group_layout,
+                    &life.life_buffer().get_bind_layout(),
+                ],
                 push_constant_ranges: &[],
             });
 
@@ -165,7 +163,7 @@ impl App {
             instance_buffer,
 
             life,
-            life_bind_group,
+            life_buffer,
         }))
     }
 
@@ -222,8 +220,11 @@ impl DrawHandlerSubscriber for App {
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
-            render_pass.set_bind_group(1, &self.life_bind_group, &[]);
-            render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
+            self.life_buffer
+                .bind_to_render_pass(&mut render_pass, 1, &[]);
+
+            self.instance_buffer
+                .bind_vertex_to_render_pass(&mut render_pass, 1);
 
             self.quad
                 .draw(&mut render_pass, 0..self.life.cell_count() as _);
