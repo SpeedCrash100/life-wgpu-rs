@@ -12,6 +12,8 @@ mod shader;
 
 mod life;
 
+mod model;
+
 pub async fn run() {
     env_logger::init();
 

@@ -11,25 +11,9 @@ use crate::{
     camera::Camera,
     event_chain::{DrawHandlerSubscriber, KeyboardHandlerSubscriber},
     life::Life,
-    shader::{Shader, Vertex},
+    model::{Model, Quad},
+    shader::Shader,
 };
-
-const VERTICES: &[Vertex] = &[
-    Vertex {
-        position: [-0.5, 0.5, 0.0],
-    },
-    Vertex {
-        position: [-0.5, -0.5, 0.0],
-    },
-    Vertex {
-        position: [0.5, -0.5, 0.0],
-    },
-    Vertex {
-        position: [0.5, 0.5, 0.0],
-    },
-];
-
-const INDICES: &[u16] = &[0, 1, 2, 0, 2, 3];
 
 pub struct App {
     surface: Surface,
@@ -43,9 +27,7 @@ pub struct App {
     camera_buffer: Buffer,
     camera_bind_group: BindGroup,
 
-    vertex_buffer: Buffer,
-    indices_buffer: Buffer,
-    num_indices: u32,
+    quad: Quad,
 
     instance_buffer: Buffer,
 
@@ -164,19 +146,7 @@ impl App {
             multiview: None,
         });
 
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(VERTICES),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-
-        let num_indices = INDICES.len() as u32;
-
-        let indices_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Index buffer"),
-            contents: bytemuck::cast_slice(INDICES),
-            usage: wgpu::BufferUsages::INDEX,
-        });
+        let quad = Quad::new(&device);
 
         Arc::new(Mutex::new(Self {
             surface,
@@ -190,9 +160,7 @@ impl App {
             camera_buffer,
             camera_bind_group,
 
-            vertex_buffer,
-            indices_buffer,
-            num_indices,
+            quad,
 
             instance_buffer,
 
@@ -255,10 +223,10 @@ impl DrawHandlerSubscriber for App {
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
             render_pass.set_bind_group(1, &self.life_bind_group, &[]);
-            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-            render_pass.set_index_buffer(self.indices_buffer.slice(..), wgpu::IndexFormat::Uint16);
-            render_pass.draw_indexed(0..self.num_indices, 0, 0..self.life.cell_count() as _);
+
+            self.quad
+                .draw(&mut render_pass, 0..self.life.cell_count() as _);
         }
 
         // submit will accept anything that implements IntoIter
