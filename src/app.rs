@@ -1,4 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    sync::{Arc, Mutex},
+    time::Instant,
+};
 
 use log::info;
 use wgpu::{
@@ -15,6 +18,7 @@ use crate::{
     life::Life,
     model::{Model, Quad},
     shader::Shader,
+    text::FpsText,
 };
 
 pub struct App {
@@ -33,6 +37,10 @@ pub struct App {
 
     life: Life,
     life_buffer: Arc<FieldState>,
+
+    fps: f32,
+    previous_frame_time: Instant,
+    fps_text: FpsText,
 }
 
 impl App {
@@ -133,6 +141,10 @@ impl App {
 
         let quad = Quad::new(&device);
 
+        let fps = 0.0;
+        let previous_frame_time = Instant::now();
+        let fps_text = FpsText::new(&device, config.format);
+
         Arc::new(Mutex::new(Self {
             surface,
             device,
@@ -149,10 +161,19 @@ impl App {
 
             life,
             life_buffer,
+
+            fps,
+            previous_frame_time,
+            fps_text,
         }))
     }
 
     pub fn update(&mut self) {
+        let now = Instant::now();
+        let frame_time = now - self.previous_frame_time;
+        self.fps = 1.0 / (frame_time.as_secs_f32());
+        self.previous_frame_time = now;
+
         self.life.step(&self.queue, &self.device);
         self.camera.update(&self.queue);
     }
@@ -212,9 +233,15 @@ impl DrawHandlerSubscriber for App {
                 .draw(&mut render_pass, 0..self.life.cell_count() as _);
         }
 
+        // draw fps
+        self.fps_text
+            .draw(self.fps, &self.device, &mut encoder, &view);
+
         // submit will accept anything that implements IntoIter
+        self.fps_text.submit();
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
+        self.fps_text.recall();
 
         Ok(())
     }

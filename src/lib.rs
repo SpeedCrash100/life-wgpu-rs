@@ -14,6 +14,8 @@ mod model;
 
 mod bindable;
 
+mod text;
+
 pub async fn run() {
     env_logger::init();
 
