@@ -1,7 +1,6 @@
 use wgpu::{
-    include_wgsl, BindGroup, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor,
-    BindGroupLayoutEntry, BindingType, Buffer, ColorTargetState, Device, FragmentState,
-    ShaderModule, ShaderStages, TextureFormat, VertexBufferLayout, VertexState,
+    include_wgsl, ColorTargetState, Device, FragmentState, ShaderModule, TextureFormat,
+    VertexBufferLayout, VertexState,
 };
 
 use crate::{bindable::CellPos, model::Vertex};
@@ -44,36 +43,5 @@ impl Shader {
             entry_point: "fs_main",
             targets: &self.color_target_states,
         }
-    }
-
-    pub fn create_camera_bind_group(
-        &self,
-        device: &Device,
-        camera_buffer: &Buffer,
-    ) -> (BindGroupLayout, BindGroup) {
-        let bind_group_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            label: Some("Camera bind group layout"),
-            entries: &[BindGroupLayoutEntry {
-                binding: 0,
-                visibility: ShaderStages::VERTEX,
-                ty: BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            }],
-        });
-
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Camera bind group"),
-            layout: &bind_group_layout,
-            entries: &[BindGroupEntry {
-                binding: 0,
-                resource: camera_buffer.as_entire_binding(),
-            }],
-        });
-
-        (bind_group_layout, bind_group)
     }
 }

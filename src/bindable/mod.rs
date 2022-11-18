@@ -11,6 +11,9 @@ pub use fieldinfo::FieldInfo;
 mod fieldstate;
 pub use fieldstate::FieldState;
 
+mod camera;
+pub use camera::Camera;
+
 pub trait HaveBindGroup {
     /// Returns layout for binding
     fn get_bind_layout(&self) -> &BindGroupLayout;

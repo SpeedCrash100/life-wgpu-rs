@@ -6,8 +6,6 @@ use event_chain::*;
 mod app;
 use app::App;
 
-mod camera;
-
 mod shader;
 
 mod life;
