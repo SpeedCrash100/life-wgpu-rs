@@ -43,11 +43,22 @@ fn main(@builtin(global_invocation_id) global_invocation_id: vec3<u32>) {
                 continue;
             }
 
-            if ((x == 0u && i == 0u) || (y == 0u && j == 0u)) {
-                continue;
+            var x_neighbor = x + i;
+            var y_neighbor = y + j;
+            if (x == 0u && i == 0u) {
+                x_neighbor = field_info.width - 1u;
+            } else {
+                x_neighbor -= 1u;
             }
 
-            var neighbor_idx = idx(x + i - 1u, y + j - 1u);
+            if (y == 0u && j == 0u) {
+                y_neighbor = field_info.height - 1u;
+            } else {
+                y_neighbor -= 1u;
+            }
+
+
+            var neighbor_idx = idx(x_neighbor, y_neighbor);
             if life_field[neighbor_idx] > 0u {
                 nc++;
             }
