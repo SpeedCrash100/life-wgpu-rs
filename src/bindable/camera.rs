@@ -1,4 +1,4 @@
-use glam::{Mat4, Vec2, Vec3};
+use glam::{Mat4, Vec2, Vec3, Vec4Swizzles};
 use wgpu::{util::DeviceExt, BindGroup, BindGroupLayout, Buffer, Device, Queue};
 
 use super::{BinableToRenderPass, HaveBindGroup};
@@ -16,6 +16,7 @@ pub const OPENGL_TO_WGPU_MATRIX: Mat4 = Mat4::from_cols_array(
 pub struct Camera {
     position: Vec2,
     scale: f32,
+    update_required: bool,
 
     view: Mat4,
     ortho: Mat4,
@@ -67,6 +68,7 @@ impl Camera {
         let mut camera = Self {
             position: Vec2::ZERO,
             scale: 1.0,
+            update_required: false,
 
             view: Mat4::IDENTITY,
             ortho: Mat4::IDENTITY,
@@ -84,14 +86,23 @@ impl Camera {
     }
 
     pub fn resize(&mut self, width: u32, height: u32) {
+        self.update_required = true;
+
         let w = width as f32 / 2.0;
         let h = height as f32 / 2.0;
         self.ortho = Mat4::orthographic_rh(-w, w, -h, h, 0.1, 100.0);
     }
 
-    pub fn update(&self, queue: &Queue) {
-        let raw = Self::build_raw(&self.ortho, &self.view);
-        queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(&[raw]));
+    pub fn update(&mut self, queue: &Queue) -> bool {
+        if self.update_required {
+            self.update_required = false;
+            let raw = Self::build_raw(&self.ortho, &self.view);
+            queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(&[raw]));
+
+            return true;
+        }
+
+        false
     }
 
     fn build_raw(ortho: &Mat4, view: &Mat4) -> Mat4 {
@@ -123,11 +134,15 @@ impl Camera {
     }
 
     pub fn scale(&mut self, factor: f32) {
+        self.update_required = true;
+
         self.scale *= factor;
-        self.view = Mat4::from_scale(Vec3::splat(factor)).mul_mat4(&self.view)
+        self.view = Mat4::from_scale(Vec3::splat(factor)).mul_mat4(&self.view);
     }
 
     pub fn translate(&mut self, translate: Vec2) {
+        self.update_required = true;
+
         self.position = self.position.mul_add(Vec2::ONE, translate);
         self.view = self
             .view
@@ -140,12 +155,27 @@ impl Camera {
     }
 
     pub fn rebuild_view(&mut self) {
+        self.update_required = true;
+
         let eye: Vec3 = self.position.extend(1.0);
         let center: Vec3 = self.position.extend(0.0);
         let up: Vec3 = Vec3::Y;
 
         self.view =
             Mat4::from_scale(Vec3::splat(self.scale)).mul_mat4(&Mat4::look_at_rh(eye, center, up));
+    }
+
+    pub fn from_clip_space_to_local(&self, clip_coord: Vec2) -> Vec2 {
+        let clip4 = clip_coord.extend(0.0).extend(1.0);
+        let raw = Self::build_raw(&self.ortho, &self.view);
+        raw.inverse().mul_vec4(clip4).xy()
+    }
+
+    pub fn view_box(&self) -> (Vec2, Vec2) {
+        let min = self.from_clip_space_to_local([-1.0, -1.0].into());
+        let max = self.from_clip_space_to_local([1.0, 1.0].into());
+
+        (min, max)
     }
 }
 

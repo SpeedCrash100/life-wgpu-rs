@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use glam::Vec2;
 use wgpu::{
     include_wgsl, CommandEncoderDescriptor, ComputePassDescriptor, ComputePipeline, Device, Queue,
 };
@@ -96,11 +97,25 @@ impl Life {
         x_rem as usize + y_rem as usize * self.field_info.width() as usize
     }
 
-    pub fn generate_cell_info(&self, device: &Device) -> CellPosInstances {
+    pub fn generate_cell_info(&self, view_box: (Vec2, Vec2), device: &Device) -> CellPosInstances {
         let mut positions = Vec::with_capacity(self.cell_count() as usize);
 
-        for i in 0..self.field_info.width() {
-            for j in 0..self.field_info.height() {
+        let min_x = view_box.0.x.floor().max(0.0) as u32;
+        let max_x = view_box
+            .1
+            .x
+            .floor()
+            .min((self.field_info.width() - 1) as f32) as u32;
+
+        let min_y = view_box.0.y.floor().max(0.0) as u32;
+        let max_y = view_box
+            .1
+            .y
+            .floor()
+            .min((self.field_info.height() - 1) as f32) as u32;
+
+        for i in min_x..=max_x {
+            for j in min_y..=max_y {
                 positions.push(CellPos {
                     pos: [i as f32, j as f32],
                     idx: self.index(i, j) as u32,

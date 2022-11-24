@@ -106,7 +106,8 @@ impl App {
         let life = Life::new(life_w, life_h, &device);
         let life_buffer = life.life_buffer();
 
-        let instance_buffer = life.generate_cell_info(&device);
+        let instance_buffer =
+            life.generate_cell_info((Vec2::ZERO, [life_w as f32, life_h as f32].into()), &device);
 
         // Shader init
         let shader = Shader::new(&device, config.format);
@@ -179,7 +180,11 @@ impl App {
         self.previous_frame_time = now;
 
         self.life.step(&self.queue, &self.device);
-        self.camera.update(&self.queue);
+        if self.camera.update(&self.queue) {
+            // camera updated rebuild view box
+            let view_box = self.camera.view_box();
+            self.instance_buffer = self.life.generate_cell_info(view_box, &self.device);
+        }
     }
 }
 
@@ -234,7 +239,7 @@ impl DrawHandlerSubscriber for App {
                 .bind_vertex_to_render_pass(&mut render_pass, 1);
 
             self.quad
-                .draw(&mut render_pass, 0..self.life.cell_count() as _);
+                .draw(&mut render_pass, 0..self.instance_buffer.len() as _);
         }
 
         // draw fps

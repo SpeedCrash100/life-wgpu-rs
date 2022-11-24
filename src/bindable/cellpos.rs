@@ -28,6 +28,7 @@ impl CellPos {
 
 pub struct CellPosInstances {
     buffer: Buffer,
+    instances: u32,
 }
 
 impl CellPosInstances {
@@ -38,7 +39,14 @@ impl CellPosInstances {
             usage: wgpu::BufferUsages::VERTEX,
         });
 
-        Self { buffer }
+        Self {
+            buffer,
+            instances: positions.len() as u32,
+        }
+    }
+
+    pub fn len(&self) -> u32 {
+        self.instances
     }
 }
 
