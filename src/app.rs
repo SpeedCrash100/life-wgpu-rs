@@ -3,6 +3,7 @@ use std::{
     time::Instant,
 };
 
+use glam::Vec2;
 use log::info;
 use wgpu::{
     Device, Instance, PrimitiveState, Queue, RenderPipeline, Surface, SurfaceConfiguration,
@@ -100,7 +101,9 @@ impl App {
 
         // Init instances
 
-        let life = Life::new(1024, 1024, &device);
+        let life_w = 1024;
+        let life_h = 1024;
+        let life = Life::new(life_w, life_h, &device);
         let life_buffer = life.life_buffer();
 
         let instance_buffer = life.generate_cell_info(&device);
@@ -108,7 +111,8 @@ impl App {
         // Shader init
         let shader = Shader::new(&device, config.format);
         // Camera prepare
-        let camera = Camera::new(size.width, size.height, &device);
+        let mut camera = Camera::new(size.width, size.height, &device);
+        camera.set_position(Vec2::from_array([life_w as f32 / 2.0, life_h as f32 / 2.0]));
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {

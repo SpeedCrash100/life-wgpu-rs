@@ -1,20 +1,24 @@
-use bytemuck::{Pod, Zeroable};
-use cgmath::{ortho, Matrix4, Point3, Vector3};
+use glam::{Mat4, Vec2, Vec3};
 use wgpu::{util::DeviceExt, BindGroup, BindGroupLayout, Buffer, Device, Queue};
 
 use super::{BinableToRenderPass, HaveBindGroup};
 
 #[rustfmt::skip]
-pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
+pub const OPENGL_TO_WGPU_MATRIX: Mat4 = Mat4::from_cols_array(
+    &[
     1.0, 0.0, 0.0, 0.0,
     0.0, 1.0, 0.0, 0.0,
     0.0, 0.0, 0.5, 0.0,
     0.0, 0.0, 0.5, 1.0,
+    ]
 );
 
 pub struct Camera {
-    view: Matrix4<f32>,
-    ortho: Matrix4<f32>,
+    position: Vec2,
+    scale: f32,
+
+    view: Mat4,
+    ortho: Mat4,
     speed: f32,
 
     buffer: Buffer,
@@ -31,18 +35,9 @@ impl Camera {
 
         debug_assert!(width > 0 && height > 0);
 
-        let eye: Point3<f32> = (0.0, 0.0, 1.0).into();
-        let center: Point3<f32> = (0.0, 0.0, 0.0).into();
-        let up: Vector3<f32> = cgmath::Vector3::unit_y();
-
-        let mut view = cgmath::Matrix4::look_at_rh(eye, center, up);
-        view = view * cgmath::Matrix4::from_scale(1.0);
-        let ortho = ortho(0.0, width as f32, 0.0, height as f32, 0.1, 100.0);
-
-        let camera_raw = Self::build_raw(&ortho, &view);
         let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Camera Buffer"),
-            contents: bytemuck::cast_slice(&[camera_raw]),
+            contents: bytemuck::cast_slice(&[Mat4::IDENTITY]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
@@ -69,19 +64,29 @@ impl Camera {
             }],
         });
 
-        Self {
-            view,
-            ortho,
+        let mut camera = Self {
+            position: Vec2::ZERO,
+            scale: 1.0,
+
+            view: Mat4::IDENTITY,
+            ortho: Mat4::IDENTITY,
             speed: 5.0,
 
             buffer,
             bind_group_layout,
             bind_group,
-        }
+        };
+
+        camera.resize(width, height);
+        camera.rebuild_view();
+
+        camera
     }
 
     pub fn resize(&mut self, width: u32, height: u32) {
-        self.ortho = ortho(0.0, width as f32, 0.0, height as f32, 0.1, 100.0);
+        let w = width as f32 / 2.0;
+        let h = height as f32 / 2.0;
+        self.ortho = Mat4::orthographic_rh(-w, w, -h, h, 0.1, 100.0);
     }
 
     pub fn update(&self, queue: &Queue) {
@@ -89,55 +94,58 @@ impl Camera {
         queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(&[raw]));
     }
 
-    fn build_raw(ortho: &Matrix4<f32>, view: &Matrix4<f32>) -> CameraRaw {
-        let mat = OPENGL_TO_WGPU_MATRIX * ortho * view;
-        CameraRaw {
-            view_proj: mat.into(),
-        }
+    fn build_raw(ortho: &Mat4, view: &Mat4) -> Mat4 {
+        OPENGL_TO_WGPU_MATRIX.mul_mat4(ortho).mul_mat4(view)
     }
 
     pub fn up(&mut self) {
-        self.view = self.view
-            * cgmath::Matrix4::from_translation(Vector3 {
-                x: 0.0,
-                y: -self.speed,
-                z: 0.0,
-            })
+        self.translate(Vec2::NEG_Y * self.speed)
     }
 
     pub fn down(&mut self) {
-        self.view = self.view
-            * cgmath::Matrix4::from_translation(Vector3 {
-                x: 0.0,
-                y: self.speed,
-                z: 0.0,
-            })
+        self.translate(Vec2::Y * self.speed)
     }
 
     pub fn left(&mut self) {
-        self.view = self.view
-            * cgmath::Matrix4::from_translation(Vector3 {
-                x: self.speed,
-                y: 0.0,
-                z: 0.0,
-            })
+        self.translate(Vec2::X * self.speed)
     }
 
     pub fn right(&mut self) {
-        self.view = self.view
-            * cgmath::Matrix4::from_translation(Vector3 {
-                x: -self.speed,
-                y: 0.0,
-                z: 0.0,
-            })
+        self.translate(Vec2::NEG_X * self.speed)
     }
 
     pub fn zoom_in(&mut self) {
-        self.view = self.view * cgmath::Matrix4::from_scale(1.1);
+        self.scale(1.1);
     }
 
     pub fn zoom_out(&mut self) {
-        self.view = self.view * cgmath::Matrix4::from_scale(0.9);
+        self.scale(0.9);
+    }
+
+    pub fn scale(&mut self, factor: f32) {
+        self.scale *= factor;
+        self.view = Mat4::from_scale(Vec3::splat(factor)).mul_mat4(&self.view)
+    }
+
+    pub fn translate(&mut self, translate: Vec2) {
+        self.position = self.position.mul_add(Vec2::ONE, translate);
+        self.view = self
+            .view
+            .mul_mat4(&Mat4::from_translation(translate.extend(0.0)))
+    }
+
+    pub fn set_position(&mut self, position: Vec2) {
+        self.position = position;
+        self.rebuild_view();
+    }
+
+    pub fn rebuild_view(&mut self) {
+        let eye: Vec3 = self.position.extend(1.0);
+        let center: Vec3 = self.position.extend(0.0);
+        let up: Vec3 = Vec3::Y;
+
+        self.view =
+            Mat4::from_scale(Vec3::splat(self.scale)).mul_mat4(&Mat4::look_at_rh(eye, center, up));
     }
 }
 
@@ -157,10 +165,4 @@ impl Drop for Camera {
     fn drop(&mut self) {
         self.buffer.destroy()
     }
-}
-
-#[repr(C)]
-#[derive(Debug, Clone, Copy, Pod, Zeroable)]
-pub struct CameraRaw {
-    view_proj: [[f32; 4]; 4],
 }
