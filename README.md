@@ -2,5 +2,6 @@
 GPU-accelerated game of life written in the Rust language
 
 # Contols
-W, A, S, D - Move camera
-Up, Down - Zoom
+W, A, S, D - Move camera\
+Up, Down - Zoom\
+Space - Play/Pause simulation

@@ -38,6 +38,7 @@ pub struct App {
 
     life: Life,
     life_buffer: Arc<FieldState>,
+    paused: bool,
 
     fps: f32,
     previous_frame_time: Instant,
@@ -166,6 +167,7 @@ impl App {
 
             life,
             life_buffer,
+            paused: false,
 
             fps,
             previous_frame_time,
@@ -179,7 +181,10 @@ impl App {
         self.fps = 1.0 / (frame_time.as_secs_f32());
         self.previous_frame_time = now;
 
-        self.life.step(&self.queue, &self.device);
+        if !self.paused {
+            self.life.step(&self.queue, &self.device);
+        }
+
         if self.camera.update(&self.queue) {
             // camera updated rebuild view box
             let view_box = self.camera.view_box();
@@ -271,6 +276,7 @@ impl KeyboardHandlerSubscriber for App {
             VirtualKeyCode::D => self.camera.right(),
             VirtualKeyCode::Up => self.camera.zoom_in(),
             VirtualKeyCode::Down => self.camera.zoom_out(),
+            VirtualKeyCode::Space => self.paused = !self.paused,
             _ => {}
         }
     }
