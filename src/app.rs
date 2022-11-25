@@ -277,6 +277,7 @@ impl KeyboardHandlerSubscriber for App {
             VirtualKeyCode::Up => self.camera.zoom_in(),
             VirtualKeyCode::Down => self.camera.zoom_out(),
             VirtualKeyCode::Space => self.paused = !self.paused,
+            VirtualKeyCode::Period if self.paused => self.life.step(&self.queue, &self.device),
             _ => {}
         }
     }
