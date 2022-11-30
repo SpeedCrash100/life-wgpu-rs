@@ -39,6 +39,7 @@ pub async fn run() {
         Box::new(CloseHandler::new()),
         Box::new(DrawHandler::new(app.clone())),
         Box::new(KeyboardHandler::new(app.clone())),
+        Box::new(MouseHandler::new(app.clone())),
     ];
 
     event_loop.run(move |event, _, control_flow| {

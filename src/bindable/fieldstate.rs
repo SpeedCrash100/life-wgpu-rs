@@ -2,7 +2,7 @@ use wgpu::{
     util::DeviceExt, BindGroup, BindGroupLayout, Buffer, BufferUsages, CommandEncoder, Device,
 };
 
-use super::{BinableToRenderPass, BindableToComputePass, HaveBindGroup};
+use super::{BinableToRenderPass, BindableToComputePass, HaveBindGroup, HaveBuffer};
 
 pub struct FieldState {
     buffer: Buffer,
@@ -79,6 +79,12 @@ impl HaveBindGroup for FieldState {
 
 impl BindableToComputePass for FieldState {}
 impl BinableToRenderPass for FieldState {}
+
+impl HaveBuffer for FieldState {
+    fn get_buffer(&self) -> &Buffer {
+        &self.buffer
+    }
+}
 
 impl Drop for FieldState {
     fn drop(&mut self) {

@@ -7,7 +7,10 @@ use wgpu::{
 
 use crate::bindable::{
     BindableToComputePass, CellPos, CellPosInstances, FieldInfo, FieldState, HaveBindGroup,
+    HaveBuffer,
 };
+
+type CellType = u32;
 
 pub struct Life {
     field_info: FieldInfo,
@@ -26,7 +29,7 @@ impl Life {
 
         // Current Field State init
         let field = (0..(width * height))
-            .map(|_| rand::random::<u32>() % 2)
+            .map(|_| rand::random::<CellType>() % 2)
             .collect::<Vec<_>>();
 
         let life = Arc::new(FieldState::new(&field, device, true));
@@ -124,6 +127,23 @@ impl Life {
         }
 
         CellPosInstances::new(positions, device)
+    }
+
+    pub fn set_cell(&mut self, x: u32, y: u32, queue: &Queue) {
+        let idx = self.index(x, y);
+        let offset = idx * std::mem::size_of::<CellType>();
+        let cell: CellType = 1;
+        queue.write_buffer(
+            self.life.get_buffer(),
+            offset as u64,
+            bytemuck::cast_slice(&[cell]),
+        );
+
+        queue.write_buffer(
+            self.new_life.get_buffer(),
+            offset as u64,
+            bytemuck::cast_slice(&[cell]),
+        );
     }
 
     #[inline(always)]

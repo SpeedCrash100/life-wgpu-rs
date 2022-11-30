@@ -14,6 +14,10 @@ mod keyboard_handler;
 pub use keyboard_handler::KeyboardHandler;
 pub use keyboard_handler::KeyboardHandlerSubscriber;
 
+mod mouse_handler;
+pub use mouse_handler::MouseHandler;
+pub use mouse_handler::MouseHandlerSubscriber;
+
 use winit::window::Window;
 
 pub trait EventChainElement {

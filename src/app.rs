@@ -8,14 +8,14 @@ use log::info;
 use wgpu::{
     Device, Instance, PrimitiveState, Queue, RenderPipeline, Surface, SurfaceConfiguration,
 };
-use winit::{event::VirtualKeyCode, window::Window};
+use winit::{dpi::PhysicalPosition, event::VirtualKeyCode, window::Window};
 
 use crate::{
     bindable::{
         BinableToRenderPass, BindableToVertexBuffers, Camera, CellPosInstances, FieldState,
         HaveBindGroup,
     },
-    event_chain::{DrawHandlerSubscriber, KeyboardHandlerSubscriber},
+    event_chain::{DrawHandlerSubscriber, KeyboardHandlerSubscriber, MouseHandlerSubscriber},
     life::Life,
     model::{Model, Quad},
     shader::Shader,
@@ -191,6 +191,13 @@ impl App {
             self.instance_buffer = self.life.generate_cell_info(view_box, &self.device);
         }
     }
+
+    fn screen_space_to_clip(&self, position: PhysicalPosition<f64>) -> Vec2 {
+        let w = (position.x / (self.config.width as f64)) as f32;
+        let h = (1.0 - position.y / (self.config.height as f64)) as f32;
+
+        Vec2::from_array([2.0 * w - 1.0, 2.0 * h - 1.0])
+    }
 }
 
 impl DrawHandlerSubscriber for App {
@@ -280,5 +287,18 @@ impl KeyboardHandlerSubscriber for App {
             VirtualKeyCode::Period if self.paused => self.life.step(&self.queue, &self.device),
             _ => {}
         }
+    }
+}
+
+impl MouseHandlerSubscriber for App {
+    fn clicked(&mut self, position: PhysicalPosition<f64>) {
+        let converted = self.screen_space_to_clip(position);
+        let local_click = self.camera.from_clip_space_to_local(converted);
+
+        self.life.set_cell(
+            local_click.x.round() as u32,
+            local_click.y.round() as u32,
+            &self.queue,
+        );
     }
 }
